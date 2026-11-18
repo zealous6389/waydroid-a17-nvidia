@@ -89,16 +89,21 @@ unzip -p "$APK" lib/x86_64/libksud.so > /tmp/ksud &&
 waydroid session stop >/dev/null 2>&1; sleep 3
 setsid -f bash -c 'exec waydroid session start > /tmp/wd-session.log 2>&1' </dev/null >/dev/null 2>&1
 for _ in $(seq 1 90); do
-  grep -qE 'ready|OSError' /tmp/wd-session.log && break
+  grep -q 'ready' /tmp/wd-session.log && break
   sleep 2
 done
-grep -E 'ready|OSError' /tmp/wd-session.log
-# Run ksud as root inside the guest container.
-SUDO_ASKPASS=/usr/bin/ksshaskpass sudo -A lxc-attach -P /var/lib/waydroid/lxc -n waydroid \
-  --clear-env -v PATH=/system/bin:/vendor/bin -- /system/bin/sh -c '/data/adb/ksud install'
-waydroid app install "$APK"
-waydroid app launch me.weishu.kernelsu
+if grep -q 'ready' /tmp/wd-session.log; then
+  # Run ksud as root inside the guest container; sudo prompts in the terminal.
+  sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid \
+    --clear-env -v PATH=/system/bin:/vendor/bin -- /system/bin/sh -c '/data/adb/ksud install' &&
+    waydroid app install "$APK" &&
+    waydroid app launch me.weishu.kernelsu
+else
+  printf '%s\n' 'Session not ready. Stop and resolve the failure in /tmp/wd-session.log before installing or launching.' >&2
+fi
 ```
+
+If `ready` is absent after the wait, stop and resolve the session failure before running any installation or launch commands. `OSError` is an error, not readiness.
 
 The Manager home screen should show Working (LKM). After wiping Waydroid's data, redo step 5.
 
@@ -106,4 +111,4 @@ The Manager home screen should show Working (LKM). After wiping Waydroid's data,
 
 Manager/ksud can be rebuilt; only the deployer signs, running the existing signing script with the original key. The build does not need `keystore/` mounted; do not read or record its contents. The recorded public certificate length is `0x02ec`, and its SHA-256 is `d77ee93d9af4c1dbf8b89cf50fd9953db3a61b9142e009a9effeeedb5693eb4f`.
 
-Installing the DKMS package does not mean the running module has been updated. The wrapped-file-reference fix only takes effect once the new module is actually loaded; do not force-unload a module that is currently providing root. Before deploying, confirm that Waydroid is stopped, that nothing else uses the module, that the module unloads cleanly, and that the new module has been built successfully for the current kernel; if it cannot be unloaded safely, keep the old module running and mark the kernel fix as pending activation — do not reboot the host and do not disturb RustDesk. Protect `/data` and the original key before updating, and do not wipe the Android data.
+Installing the DKMS package does not mean the running module has been updated. The wrapped-file-reference fix only takes effect once the new module is actually loaded; do not force-unload a module that is currently providing root. Before deploying, confirm that Waydroid is stopped, that nothing else uses the module, that the module unloads cleanly, and that the new module has been built successfully for the current kernel. Only after Waydroid is stopped and the old module has been successfully unloaded, run `sudo systemctl restart kernelsu-load.service` to load the new module, and confirm that it loaded successfully before starting Waydroid. If the old module cannot be unloaded safely, keep it running and mark the kernel fix as pending activation — do not restart the service, reboot the host or disturb RustDesk. Protect `/data` and the original key before updating, and do not wipe the Android data.
