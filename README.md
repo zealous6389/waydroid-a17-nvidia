@@ -3,7 +3,6 @@
 # Waydroid A17 NVIDIA
 
 **Android 17 on your Linux desktop, accelerated by your NVIDIA GPU.**
-**在 Linux 桌面上跑 Android 17，用 NVIDIA 显卡硬件加速。**
 
 [![Release](https://img.shields.io/github/v/release/cagedbird043/waydroid-a17-nvidia?label=release&color=76b900)](https://github.com/cagedbird043/waydroid-a17-nvidia/releases/latest)
 [![AUR](https://img.shields.io/aur/version/waydroid-a17-nvidia-bin?logo=archlinux&color=1793d1)](https://aur.archlinux.org/packages/waydroid-a17-nvidia-bin)
@@ -15,7 +14,7 @@
 ![Built with Claude Opus 5.5](https://img.shields.io/badge/built%20with-Claude%20Opus%205.5-d97757?logo=claude&logoColor=white)
 ![Built with GPT 6.1 Sol](https://img.shields.io/badge/built%20with-GPT%206.1%20Sol-412991)
 
-[English](#english) · [中文](#中文) · Blog: [English](https://cagedbird.cn/2026/10/31/技术实践/系统工程/系统编程/Android/Waydroid-A17-NVIDIA-hardware-accelerated-Android-17-on-NVIDIA-Linux/) / [中文](https://cagedbird.cn/2026/10/31/技术实践/系统工程/系统编程/Android/Waydroid-A17-NVIDIA：N卡Linux桌面上的硬件加速Android17/)
+Blog: [English](https://cagedbird.cn/2026/10/31/%E6%8A%80%E6%9C%AF%E5%AE%9E%E8%B7%B5/%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B/%E7%B3%BB%E7%BB%9F%E7%BC%96%E7%A8%8B/Android/Waydroid-A17-NVIDIA-hardware-accelerated-Android-17-on-NVIDIA-Linux/) · [Chinese](https://cagedbird.cn/2026/10/31/%E6%8A%80%E6%9C%AF%E5%AE%9E%E8%B7%B5/%E7%B3%BB%E7%BB%9F%E5%B7%A5%E7%A8%8B/%E7%B3%BB%E7%BB%9F%E7%BC%96%E7%A8%8B/Android/Waydroid-A17-NVIDIA%EF%BC%9AN%E5%8D%A1Linux%E6%A1%8C%E9%9D%A2%E4%B8%8A%E7%9A%84%E7%A1%AC%E4%BB%B6%E5%8A%A0%E9%80%9FAndroid17/)
 
 ![Android apps as KDE windows](docs/images/multiwindow.png)
 
@@ -76,7 +75,7 @@ update has no new FPS, CPU-use or latency A/B result.
 | GPU time per frame | 1.7–2.4 ms | 2.0 ms | 1.4 ms |
 
 Basemark on Android only ships ETC2 textures, which NVK has to emulate, while the host uses BC7, so the comparison
-favours the host. Details in [`reports/`](reports/).
+favours the host.
 
 ### 📦 Install (Arch Linux)
 
@@ -147,121 +146,3 @@ Management → KWin Scripts → "Waydroid card placement".
 Original code here is [MIT](LICENSE). The patches under `patches/` keep their upstream licenses (Apache-2.0, BSD-3-Clause,
 MIT/HPND, GPL-3.0 as appropriate) and `nvidia-product/` keeps waydroid-nvidia's; the vendor image contains these
 projects under their own licenses.
-
----
-
-## 中文
-
-Waydroid 里的 LineageOS 24.0（Android 17），显卡、视频引擎、root 和桌面都打通：Vulkan 和 GLES 经 NVK 跑在 NVIDIA 上，
-视频硬解**和硬编**，KernelSU，每个安卓应用都是一个独立的 KDE 窗口。
-
-### ✨ 亮点
-
-| | 功能 | |
-|---|---|---|
-| 🎮 | **GPU 加速** | ANGLE → NVK → NVIDIA 内核驱动，HWUI 用 Vulkan 渲染。Chrome 里 WebGL、WebGPU 都能用。 |
-| 🎬 | **视频硬解** | H.264、HEVC、VP9、AV1 走 NVDEC，YouTube、Chrome 和播放器自动使用。 |
-| 📡 | **视频硬编** | H.264、HEVC、AV1 走 NVENC。Chrome 的 WebCodecs 和 WebRTC（视频通话）用显卡编码。 |
-| 🪟 | **应用即桌面窗口** | 每个安卓应用一个 KDE 窗口，由 KWin 移动、缩放、关闭，记住上次的位置。 |
-| ⌨️ | **宿主输入法** | 用 fcitx5、ibus 直接在安卓里打字，候选框跟随光标。 |
-| 📋 | **剪贴板与文件** | 剪贴板双向同步；`~/Downloads` 在安卓里就是 `Download/Host`。 |
-| 🖱️ | **鼠标当触摸** | 在不认鼠标拖动的应用（Play 商店等 Compose 界面）里，拖动变成手指滑动。 |
-| 🔓 | **Root** | 宿主内核上的 KernelSU，支持模块（Zygisk Next、LSPosed 等）。 |
-| 🛒 | **Google 应用** | 用 ATV 的 GAPPS system 镜像，Play 商店已认证。 |
-
-本轮维护更新 Mesa 到 **26.2.6**，保留本地图形/计算队列支持，将共享 Rust RM 的编码参数处理和 RGB 通道修复
-与匹配的 Codec2 服务一同交付。Codec2 解码也使用 Rust：VP9 单输入含多张显示帧时逐帧输出，CSD 上限 2 MiB，
-使用前校验 gralloc 句柄与平面布局；沙箱允许日志套接字，覆盖冷启动。
-
-KernelSU **32713** 保留容器适配与原签名，定向修复 shell 参数转义、profile/template 路径验证和文件引用平衡，
-见 [`kernelsu/`](kernelsu/)。ATV system 保持不变，SPL 仍为 **2026-10-01**；保存的系统安全源码补丁并未部署，
-不代表完整的 11 月 ASB。下方性能表来自此前版本，本轮没有新的 FPS、CPU 占用或延迟 A/B 结果。
-
-### 📸 截图
-
-| Chrome：全部硬件加速 | YouTube 走 NVDEC |
-|---|---|
-| ![chrome://gpu](docs/images/chrome-gpu.png) | ![YouTube](docs/images/youtube.png) |
-
-| KernelSU 工作中 | |
-|---|---|
-| ![KernelSU](docs/images/kernelsu.png) | |
-
-### 🚀 性能
-
-| 测试（4K，Vulkan） | 宿主 NVIDIA 官方驱动 | Waydroid | |
-|---|---|---|---|
-| Basemark GPU，Medium，离屏 | 35657 | 29369 | 82 % |
-| 3DMark Wild Life Extreme | — | 12300–13100（约 74 FPS） | |
-
-| 编码，1080p，RTX 4060 Laptop | H.264 | HEVC | AV1 |
-|---|---|---|---|
-| 每帧 GPU 耗时 | 1.7–2.4 ms | 2.0 ms | 1.4 ms |
-
-安卓版 Basemark 只带 ETC2 纹理，NVK 要模拟，宿主用的是 BC7，所以这项对比对宿主有利。详见 [`reports/`](reports/)。
-
-### 📦 安装（Arch Linux）
-
-```bash
-yay -S waydroid-a17-nvidia-bin
-```
-
-再放入 system 镜像（[WayDroid-ATV `20261017`](https://github.com/WayDroid-ATV/waydroid-builds/releases/tag/20261017)，GAPPS 或 VANILLA）并初始化：
-
-```bash
-sudo mkdir -p /etc/waydroid-extra/images
-sudo bsdtar -xf lineage-24.0-20261017-GAPPS-waydroid_x86_64-system.zip -C /etc/waydroid-extra/images system.img
-sudo bsdtar -xf /usr/lib/waydroid-nvidia/vendor/waydroid-nvidia-vendor-x86_64-*.zip -C /etc/waydroid-extra/images vendor.img
-sudo waydroid init -f
-sudo waydroid-nvidia-setup      # 先在你的显卡上测试 vendor 镜像，通过后再装上
-waydroid prop set persist.waydroid.multi_windows true
-waydroid session start
-```
-
-需要 NVIDIA **open** 内核模块和 binder（binderfs）。NVIDIA 驱动更新后再跑一次 `sudo waydroid-nvidia-setup`。
-Root 见 [`kernelsu/`](kernelsu/)。
-
-<details>
-<summary>其他发行版</summary>
-
-从 [Releases](https://github.com/cagedbird043/waydroid-a17-nvidia/releases/latest) 下载同一版的 vendor 镜像（分块）和 native 驱动包：
-
-```bash
-cat vendor.img.zst.part* > vendor.img.zst && zstd -d vendor.img.zst
-sha256sum -c vendor.img.zst.sha256
-```
-
-安装打上 `patches/waydroid-nvidia/` 的 [waydroid-nvidia](https://github.com/Shiro836/waydroid-nvidia) 主机部分，把驱动包解压到
-`/usr/lib/waydroid-nvidia/native/release/`，`system.img` 和 `vendor.img` 放进 `/etc/waydroid-extra/images/`，运行
-`waydroid-nvidia-setup`。文件布局以 [PKGBUILD](aur/waydroid-a17-nvidia-bin/PKGBUILD) 为准。
-</details>
-
-<details>
-<summary>常用开关</summary>
-
-| 命令 | 作用 |
-|---|---|
-| `waydroid prop set persist.waydroid.multi_windows true` | 每个应用一个 KDE 窗口 |
-| `waydroid show-full-ui` | 在一个窗口里打开整个安卓桌面 |
-| `waydroid prop set persist.waydroid.fake_touch "com.android.vending"` | 这些应用里鼠标拖动当触摸（`*` 为全部） |
-| `waydroid prop set persist.waydroid.nvidia_video_decode off` | 视频改用软解 |
-| `waydroid prop set persist.waydroid.nvidia_video_encode off` | 视频改用软编 |
-
-共享给安卓的目录：`/var/lib/waydroid/waydroid.cfg` 的 `[waydroid]` 里配 `shared_folders`，每行一个 `主机目录:存储路径`。
-记住窗口位置的 KWin 脚本：系统设置 → 窗口管理 → KWin 脚本 →「Waydroid card placement」。
-</details>
-
-> [!NOTE]
-> 个人项目，只在一台机器上测过：RTX 4060 Laptop、NVIDIA open 驱动 615.78.08、KDE Plasma 6 Wayland、Arch Linux。
-> Widevine 是 L3，流媒体应用一般只给标清。欢迎 issue 和 PR，但不保证回复。
-> 本项目由 Claude Opus 5.5 和 GPT 6.1 Sol 共同参与开发。
-
-### 🙏 致谢
-
-- [Shiro836/waydroid-nvidia](https://github.com/Shiro836/waydroid-nvidia)：nvidia-prolapse 模式、NVK 与 Rust RM 驱动、ANGLE、NVDEC Codec2 组件和大部分 hwcomposer 修正。没有它就没有这个项目。
-- [WayDroid-ATV](https://github.com/WayDroid-ATV)（supechicken）：Android 17 system 镜像与设备树，以及 [Waydroid 版 KernelSU](https://github.com/supechicken/KernelSU)。
-- [mickys/nvenc](https://github.com/mickys/nvenc)：NVENC 编码核心；[NVIDIA/open-gpu-doc](https://github.com/NVIDIA/open-gpu-doc)：NVENC 类头文件。
-- [Waydroid](https://github.com/waydroid/waydroid)、[LineageOS](https://lineageos.org)、[KernelSU](https://github.com/tiann/KernelSU)、[Mesa](https://mesa3d.org)、[ANGLE](https://chromium.googlesource.com/angle/angle)，以及 wayland-protocols 中 `text-input-v3`、`ext-data-control-v1` 的作者们。
-
-本仓库的原创代码按 [MIT](LICENSE) 提供。`patches/` 下的补丁沿用各上游许可证（Apache-2.0、BSD-3-Clause、MIT/HPND、GPL-3.0），
-`nvidia-product/` 沿用 waydroid-nvidia 的许可证；vendor 镜像中的各项目遵循各自的许可证。
