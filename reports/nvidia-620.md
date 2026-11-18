@@ -1,5 +1,12 @@
 # NVIDIA open 620.70.06 bring-up
 
+Published as
+[`a17-20261117-1`](https://github.com/zealous6389/waydroid-a17-nvidia/releases/tag/a17-20261117-1).
+The exact tested package, native/vendor assets, source bundle and checksums
+are available there. See the
+[public-download/build verification and scoped cleanup record](release-a17-20261117-1-verification.md)
+for the post-publication result.
+
 ## Scope
 
 Port the exact RM ABI profile proposed in
