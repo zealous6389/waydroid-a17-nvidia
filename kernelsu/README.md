@@ -87,12 +87,13 @@ unzip -p "$APK" lib/x86_64/libksud.so > /tmp/ksud &&
   sudo install -D -m 755 -o root -g root /tmp/ksud ~/.local/share/waydroid/data/adb/ksud
 # Start the desktop user's Waydroid session first and wait until Android is ready; starting only the container service is not enough.
 waydroid session stop >/dev/null 2>&1; sleep 3
+: > /tmp/wd-session.log
 setsid -f bash -c 'exec waydroid session start > /tmp/wd-session.log 2>&1' </dev/null >/dev/null 2>&1
 for _ in $(seq 1 90); do
-  grep -q 'ready' /tmp/wd-session.log && break
+  grep -qE 'Android with user [0-9]+ is ready' /tmp/wd-session.log && break
   sleep 2
 done
-if grep -q 'ready' /tmp/wd-session.log; then
+if grep -qE 'Android with user [0-9]+ is ready' /tmp/wd-session.log; then
   # Run ksud as root inside the guest container; sudo prompts in the terminal.
   sudo lxc-attach -P /var/lib/waydroid/lxc -n waydroid \
     --clear-env -v PATH=/system/bin:/vendor/bin -- /system/bin/sh -c '/data/adb/ksud install' &&
@@ -103,7 +104,7 @@ else
 fi
 ```
 
-If `ready` is absent after the wait, stop and resolve the session failure before running any installation or launch commands. `OSError` is an error, not readiness.
+If the `Android with user <id> is ready` message is absent after the wait, stop and resolve the session failure before running any installation or launch commands. `OSError` and `Session is already running` are errors, not readiness.
 
 The Manager home screen should show Working (LKM). After wiping Waydroid's data, redo step 5.
 
