@@ -4,8 +4,7 @@
 
 **Android 17 on your Linux desktop, accelerated by your NVIDIA GPU.**
 
-[![Release](https://img.shields.io/github/v/release/cagedbird043/waydroid-a17-nvidia?label=release&color=76b900)](https://github.com/cagedbird043/waydroid-a17-nvidia/releases/latest)
-[![AUR](https://img.shields.io/aur/version/waydroid-a17-nvidia-bin?logo=archlinux&color=1793d1)](https://aur.archlinux.org/packages/waydroid-a17-nvidia-bin)
+[![Release](https://img.shields.io/github/v/release/zealous6389/waydroid-a17-nvidia?label=release&color=76b900)](https://github.com/zealous6389/waydroid-a17-nvidia/releases/latest)
 ![Android 17](https://img.shields.io/badge/Android-17-3ddc84?logo=android&logoColor=white)
 ![NVIDIA](https://img.shields.io/badge/NVIDIA-NVK%20%2B%20NVDEC%20%2B%20NVENC-76b900?logo=nvidia&logoColor=white)
 ![KDE Plasma](https://img.shields.io/badge/KDE%20Plasma-Wayland-1d99f3?logo=kde&logoColor=white)
@@ -22,7 +21,24 @@ Blog: [English](https://cagedbird.cn/2026/10/31/%E6%8A%80%E6%9C%AF%E5%AE%9E%E8%B
 
 ---
 
-## English
+## NVIDIA 620 fork
+
+Fork of [cagedbird043/waydroid-a17-nvidia](https://github.com/cagedbird043/waydroid-a17-nvidia),
+adding exact **NVIDIA open 620.70.06** support from
+[Shiro836/nvidia-prolapse#1](https://github.com/Shiro836/nvidia-prolapse/pull/1).
+Tested on an **RTX 4060 Ti (8 GiB), CachyOS and KDE Plasma Wayland**:
+22 graphics/compute gate cases plus media checks, ANGLE → NVK renderer
+identity, four Android hardware decoders, three hardware encoders and
+four PRIVATE Surface decoder tests passed.
+
+Release `20261117.1-1` uses a matching rebuilt RM/NVK/nvrm native
+bundle and an ext4 vendor-image repack retaining the published A17
+Codec2 service and other modules. It is **not a full Android vendorimage
+rebuild** and does not replace the host NVIDIA driver.
+Chrome WebCodecs/WebRTC, KernelSU and broader desktop integrations have
+not been retested on this fork's machine. The feature overview and
+screenshots below describe the original project; they are not new
+620-machine test evidence.
 
 LineageOS 24.0 (Android 17) in Waydroid, with the GPU, the video engines, root and the desktop all working together:
 Vulkan and GLES on NVIDIA through NVK, hardware video decode **and encode**, KernelSU, and every Android app as its own
@@ -80,8 +96,19 @@ favours the host.
 ### 📦 Install (Arch Linux)
 
 ```bash
-yay -S waydroid-a17-nvidia-bin
+git clone https://github.com/zealous6389/waydroid-a17-nvidia.git
+cd waydroid-a17-nvidia
+git checkout a17-20261117-1
+cd aur/waydroid-a17-nvidia-bin
+makepkg --verifysource
+makepkg -si
 ```
+
+Release tag: `a17-20261117-1`. No AUR account,
+AUR helper or AUR publication is needed. The checksum-pinned PKGBUILD
+downloads prebuilt assets; it does not compile Mesa, Rust or Android.
+Review the PKGBUILD before running it. Arch build tools (`base-devel`
+and `git`) are required, alongside the runtime dependencies it declares.
 
 Then add the system image ([WayDroid-ATV `20261017`](https://github.com/WayDroid-ATV/waydroid-builds/releases/tag/20261017), GAPPS or VANILLA) and set up:
 
@@ -98,16 +125,20 @@ waydroid session start
 Needs the NVIDIA **open** kernel modules and binder (binderfs). Run `sudo waydroid-nvidia-setup` again after an
 NVIDIA driver update. Root: [`kernelsu/`](kernelsu/).
 
+> [!IMPORTANT]
+> Original `20261111.1` binaries do not support NVIDIA **620.70.06**.
+> Use the matching fork package/vendor pair, not an individual replacement library.
+> Unknown driver versions still fail closed. After a driver update, setup may reject it
+> until that exact version is supported; do not bypass the gate.
+
 <details>
 <summary>Other distributions</summary>
 
-From [Releases](https://github.com/cagedbird043/waydroid-a17-nvidia/releases/latest), take the vendor image (in parts) and
-the native driver bundle of the same version:
-
-```bash
-cat vendor.img.zst.part* > vendor.img.zst && zstd -d vendor.img.zst
-sha256sum -c vendor.img.zst.sha256
-```
+The fork's package is tested only on CachyOS/Arch. Other distributions
+need equivalent host integration and are not validated by this release.
+From the fork's [Releases](https://github.com/zealous6389/waydroid-a17-nvidia/releases),
+use the single vendor ZIP and native bundle from the same tag; do not
+combine original split-image assets with this fork's native libraries.
 
 Install the host side of [waydroid-nvidia](https://github.com/Shiro836/waydroid-nvidia) with `patches/waydroid-nvidia/`
 applied, extract the bundle into `/usr/lib/waydroid-nvidia/native/release/`, put `system.img` and `vendor.img` into
@@ -132,8 +163,10 @@ Management → KWin Scripts → "Waydroid card placement".
 </details>
 
 > [!NOTE]
-> A personal project, tested on one machine: RTX 4060 Laptop, NVIDIA open driver 615.78.08, KDE Plasma 6 Wayland,
-> Arch Linux. Widevine is L3, so streaming apps usually play SD. Issues and PRs are welcome; replies are not guaranteed.
+> The original project was tested on RTX 4060 Laptop, NVIDIA open 615.78.08, KDE Plasma 6 Wayland,
+> Arch Linux. This fork's 620 test machine and limitations are listed above.
+> Original performance tables and screenshots are not RTX 4060 Ti benchmarks.
+> Widevine is L3, so streaming apps usually play SD. Issues and PRs are welcome; replies are not guaranteed.
 > Developed together with Claude Opus 5.5 and GPT 6.1 Sol.
 
 ### 🙏 Acknowledgements

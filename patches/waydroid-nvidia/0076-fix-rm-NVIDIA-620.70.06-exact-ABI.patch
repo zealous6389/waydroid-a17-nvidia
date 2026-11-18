@@ -1,0 +1,291 @@
+From eeb3a41df178ad61c79bdca0ce6fda98b8bcfdff Mon Sep 17 00:00:00 2001
+From: zealous6389 <358092365+zealous6389@users.noreply.github.com>
+Date: Tue, 17 Nov 2026 22:05:22 -0600
+Subject: [PATCH] fix(rm): support the exact NVIDIA 620.70.06 allocation ABI
+
+Port YX14ng upstream commit 6fda6bf000b19783ec799d0f8340dbd633e075c2 from https://github.com/Shiro836/nvidia-prolapse/pull/1. Preserve exact version rejection and the canonical 615 schema; test allocation growth, relocated flags and zero reserved bytes.
+
+Co-Authored-By: GPT 6.1 Sol <noreply@openai.com>
+---
+ .../driver-source/native/COMPATIBILITY.md     | 10 +-
+ .../driver-source/native/src/compat.rs        | 87 +++++++++++++++--
+ .../driver-source/native/src/compat_data.rs   | 95 +++++++++++++++++++
+ 3 files changed, 182 insertions(+), 10 deletions(-)
+
+diff --git a/nvidia-prolapse/driver-source/native/COMPATIBILITY.md b/nvidia-prolapse/driver-source/native/COMPATIBILITY.md
+index b68ed14..356234a 100644
+--- a/nvidia-prolapse/driver-source/native/COMPATIBILITY.md
++++ b/nvidia-prolapse/driver-source/native/COMPATIBILITY.md
+@@ -16,7 +16,15 @@ all-driver runtime promotion. Earlier rental records retain their source hashes.
+ 
+ ## Exact ABI and capability decisions
+ 
+-`src/compat.rs` and generated `compat_data.rs` select an exact release from independently compiled public C declarations, preserving branch backports. The union contains335 recognized versions;225 have complete client ABI evidence.110 older versions and every unknown version fail before opening a device. Of the225,137 have the fixed semaphore-fence interface used here; the other88 require a different synchronization implementation. Regenerate with `tools/generate-compat.py`; inputs/provenance stay private.
++`src/compat.rs` and generated `compat_data.rs` select exact releases, preserving branch backports. Including the incremental 620.70.06 port, the union contains 336 recognized versions; 226 have client ABI profiles. 110 older versions and every unknown version fail before opening a device. Of the 226, 138 have the fixed semaphore-fence interface used here; the other 88 require a different synchronization implementation.
++
++The 620.70.06 profile is ported from [Shiro836/nvidia-prolapse PR #1](https://github.com/Shiro836/nvidia-prolapse/pull/1), ABI commit `6fda6bf000b19783ec799d0f8340dbd633e075c2`. It adds a 32-byte channel-group payload (`internalFlags` moves from offset 24 to 28) and a 16-byte context-share payload. New reserved handle slots are zero-filled; the canonical 615.71.09 logical schema and all older profiles remain unchanged. Only this exact 620 release is admitted, not the whole 620 branch. ABI admission is not proof of working graphics, video, or Waydroid on a given GPU.
++
++`tools/compat-provenance.json` remains the historical 335-release / 21-profile / 91-layout census, not new provenance for the incremental 336-release / 22-profile / 93-layout table. The upstream PR does not supply a regenerated manifest or its complete independent probe artifacts. Do not claim that those historical hashes validate 620.70.06.
++
++For independent validation, pin the NVIDIA/open-gpu-kernel-modules `620.70.06` tag to its resolved commit; compile exact public headers with both `-m32` and `-m64`. Record `sizeof`, every used field's `offsetof`/width, and every profile constant, plus compiler commands, header blob hashes and probe outputs. Explicitly check channel-group `reserved2` at offset 24 and context-share `reserved` at offset 12 (both width 4), not only fields copied by the adapter. Compare both ABI outputs and the complete profile; missing symbols or mismatches must fail, never silently skip. Keep upstream's reserved members zero. The optional PR probe script is not a verifier: it skips undeclared constants and does not compare actual output against expected output.
++
++Full census regeneration uses `tools/generate-compat.py` and its original private build artifacts, including all lifecycle/static-bar1/zcull/video/subcontext families; rerunning it without adding the new exact-tag artifacts will drop this incremental profile.
+ 
+ `src/capabilities.rs` intersects explicit known classes with the RM class list and checks the queried ISA against the supported3D/compute pair. RM ISA is not converted arithmetically to SM: GB20x0xa04/0xc00 meansSM120, GA1000x802 meansSM80, and TU116/TU1170x703 meansSM75 while preserving the real chipset identity. Copy engines are selected through the queried graphics partner list and matching per-engine class list, then allocated with version1 and the discovered engine ordinal; an absent or ambiguous partner fails explicitly. Maxwell/Pascal use pre-Volta submission; Volta and newer use a selected USERMODE class. Unknown families fail by name. Host module flavour, exact PCI/subsystem membership, platform and execution remain independent requirements; consult `build/gpu-coverage/matrix.md` from the repository root.
+ 
+diff --git a/nvidia-prolapse/driver-source/native/src/compat.rs b/nvidia-prolapse/driver-source/native/src/compat.rs
+index 55977c2..d60dbf1 100644
+--- a/nvidia-prolapse/driver-source/native/src/compat.rs
++++ b/nvidia-prolapse/driver-source/native/src/compat.rs
+@@ -576,7 +576,7 @@ mod tests {
+         }
+         assert_eq!(
+             (present, size_only, with_range, with_wc),
+-            (90, 2, 88, 57),
++            (91, 2, 89, 58),
+             "update only after rerunning the exact-tag static BAR1 C oracle"
+         );
+     }
+@@ -925,7 +925,7 @@ mod tests {
+             assert_eq!(wire.bytes, [0x22, 0, 0, 0, 10, 0, 0, 0], "{version}");
+             checked += 1;
+         }
+-        assert_eq!(checked, 225);
++        assert_eq!(checked, 226);
+     }
+     #[test]
+     fn cpu_unmap_cookie_preserves_full_width_and_public_status_offset() {
+@@ -964,7 +964,7 @@ mod tests {
+             checked += 1;
+         }
+         assert_eq!(
+-            checked, 225,
++            checked, 226,
+             "update only after running the exact-tag C oracle"
+         );
+     }
+@@ -1106,19 +1106,19 @@ mod tests {
+             external += usize::from(crate::external::validate_compat(c).is_ok());
+             fences += usize::from(crate::fences::validate_compat(c).is_ok());
+         }
+-        assert_eq!(clients, 225);
+-        assert_eq!(external, 225);
+-        assert_eq!(fences, 137);
++        assert_eq!(clients, 226);
++        assert_eq!(external, 226);
++        assert_eq!(fences, 138);
+     }
+     #[test]
+     fn exact_membership_and_unknown_version_are_distinct() {
+-        assert_eq!(data::VERSIONS.len(), 335);
++        assert_eq!(data::VERSIONS.len(), 336);
+         assert_eq!(
+             data::VERSIONS
+                 .iter()
+                 .filter(|(v, _)| Compat::for_version(v).unwrap().require_client_abi().is_ok())
+                 .count(),
+-            225
++            226
+         );
+         assert!(Compat::for_version("580.94.13").is_ok());
+         assert!(Compat::for_version("580.94.14").is_err());
+@@ -1133,7 +1133,7 @@ mod tests {
+             .is_ok());
+         // Published OGKM releases probed like every other tag; each must
+         // resolve to its measured profile, not to a neighbour's.
+-        for version in ["580.196.07", "595.44.16", "595.112.07", "615.71.10"] {
++        for version in ["580.196.07", "595.44.16", "595.112.07", "615.71.10", "620.70.06"] {
+             assert!(Compat::for_version(version)
+                 .unwrap()
+                 .require_client_abi()
+@@ -1141,6 +1141,75 @@ mod tests {
+         }
+     }
+     #[test]
++    fn nvidia_620_allocation_growth_preserves_615_and_zeroes_new_bytes() {
++        const GROUP: &str = "NV_CHANNEL_GROUP_ALLOCATION_PARAMETERS";
++        const SHARE: &str = "NV_CTXSHARE_ALLOCATION_PARAMETERS";
++        let latest = Compat::for_version("620.70.06").unwrap();
++        latest.require_client_abi().unwrap();
++        for (version, group_size, flags_offset, share_size) in [
++            ("615.71.09", 28, 24, 12),
++            ("615.78.08", 28, 24, 12),
++            ("620.70.06", 32, 28, 16),
++        ] {
++            let c = Compat::for_version(version).unwrap();
++            assert_eq!(c.layout_size(GROUP).unwrap(), group_size, "{version}");
++            assert_eq!(c.layout(GROUP).unwrap().field("internalFlags").unwrap().offset,
++                       flags_offset, "{version}");
++            assert_eq!(c.layout_size(SHARE).unwrap(), share_size, "{version}");
++            assert_eq!(c.allocation_layout(0xa06c, 28).unwrap(), Some(GROUP));
++            assert_eq!(c.allocation_layout(0x9067, 12).unwrap(), Some(SHARE));
++            let mut group = abi::ChannelGroup {
++                error: 0x11223344,
++                ecc_error: 0x22334455,
++                vaspace: 0x33445566,
++                engine: 0x44556677,
++                vgpu: 1,
++                padding: [0xff; 3],
++                reserved: 0x55667788,
++                flags: 0x66778899,
++            };
++            let mut wire = c.pack(GROUP, &group).unwrap();
++            let mut expected = vec![0; group_size];
++            for (offset, value) in [(0, group.error), (4, group.ecc_error),
++                (8, group.vaspace), (12, group.engine), (20, group.reserved),
++                (flags_offset, group.flags)] {
++                expected[offset..offset + 4].copy_from_slice(&value.to_ne_bytes());
++            }
++            expected[16] = 1;
++            assert_eq!(wire.bytes, expected, "{version}: padding/reserved2 must be zero");
++            wire.bytes[flags_offset..flags_offset + 4].copy_from_slice(&0x12345678u32.to_ne_bytes());
++            wire.unpack(&mut group).unwrap();
++            assert_eq!(group.flags, 0x12345678, "{version}");
++            let mut share = abi::ContextShare {
++                vaspace: 0x778899aa, flags: 2, subcontext: 3,
++            };
++            let mut wire = c.pack(SHARE, &share).unwrap();
++            let mut expected = vec![0; share_size];
++            for (offset, value) in [(0, share.vaspace), (4, share.flags), (8, share.subcontext)] {
++                expected[offset..offset + 4].copy_from_slice(&value.to_ne_bytes());
++            }
++            assert_eq!(wire.bytes, expected, "{version}: new reserved handle must be zero");
++            wire.bytes[8..12].copy_from_slice(&5u32.to_ne_bytes());
++            wire.unpack(&mut share).unwrap();
++            assert_eq!(share.subcontext, 5, "{version}");
++        }
++        assert_eq!(data::CANONICAL.layout(GROUP).unwrap().size, 28);
++        assert_eq!(data::CANONICAL.layout(SHARE).unwrap().size, 12);
++        assert_eq!(latest.profile.constants, data::CANONICAL.constants);
++        for &(name, old) in data::CANONICAL.layouts {
++            if name != GROUP && name != SHARE {
++                assert_eq!(latest.layout(name).unwrap(), old, "{name}");
++            }
++        }
++    }
++    #[test]
++    fn unknown_620_releases_fail_closed_without_branch_fallback() {
++        for version in ["620.70.05", "620.70.07", "620.70.6", "620.999", "620.70.06-extra"] {
++            let error = Compat::for_version(version).unwrap_err();
++            assert!(matches!(error, crate::rm::Error::Contract(_)), "{version}");
++        }
++    }
++    #[test]
+     fn every_field_fits_and_current_rust_sizes_match_census() {
+         for (_, profile) in data::VERSIONS {
+             for (_, layout) in profile.layouts {
+diff --git a/nvidia-prolapse/driver-source/native/src/compat_data.rs b/nvidia-prolapse/driver-source/native/src/compat_data.rs
+index 833d4a4..a2a1d5e 100644
+--- a/nvidia-prolapse/driver-source/native/src/compat_data.rs
++++ b/nvidia-prolapse/driver-source/native/src/compat_data.rs
+@@ -740,6 +740,100 @@ Field { name: "bIsCallingContextVgpuPlugin", offset: 16, len: 1 },
+ Field { name: "reserved", offset: 20, len: 4 },
+ Field { name: "internalFlags", offset: 24, len: 4 },
+ ] };
++// Incremental exact-tag port: Shiro836/nvidia-prolapse 6fda6bf000b19783ec799d0f8340dbd633e075c2.
++// New reserved members have no logical caller fields and remain zero in Wire.
++static L91: Layout = Layout { name: "NV_CHANNEL_GROUP_ALLOCATION_PARAMETERS", size: 32, fields: &[
++Field { name: "hObjectError", offset: 0, len: 4 },
++Field { name: "hObjectEccError", offset: 4, len: 4 },
++Field { name: "hVASpace", offset: 8, len: 4 },
++Field { name: "engineType", offset: 12, len: 4 },
++Field { name: "bIsCallingContextVgpuPlugin", offset: 16, len: 1 },
++Field { name: "reserved", offset: 20, len: 4 },
++Field { name: "internalFlags", offset: 28, len: 4 },
++] };
++static L92: Layout = Layout { name: "NV_CTXSHARE_ALLOCATION_PARAMETERS", size: 16, fields: &[
++Field { name: "hVASpace", offset: 0, len: 4 },
++Field { name: "flags", offset: 4, len: 4 },
++Field { name: "subctxId", offset: 8, len: 4 },
++] };
++static P21: Profile = Profile { layouts: &[
++("NV0000_CTRL_CLIENT_GET_ADDR_SPACE_TYPE_PARAMS", &L9),
++("NV0000_CTRL_GPU_GET_ID_INFO_V2_PARAMS", &L10),
++("NV0000_CTRL_OS_UNIX_EXPORT_OBJECT", &L11),
++("NV0000_CTRL_OS_UNIX_EXPORT_OBJECT_TO_FD_PARAMS", &L12),
++("NV0000_CTRL_OS_UNIX_IMPORT_OBJECT_FROM_FD_PARAMS", &L13),
++("NV0005_ALLOC_PARAMETERS", &L14),
++("NV0080_ALLOC_PARAMETERS", &L15),
++("NV0080_CTRL_BSP_GET_CAPS_PARAMS_V2", &L16),
++("NV0080_CTRL_FIFO_GET_ENGINE_CONTEXT_PROPERTIES_PARAMS", &L17),
++("NV0080_CTRL_GPU_GET_CLASSLIST_PARAMS", &L18),
++("NV2080_ALLOC_PARAMETERS", &L19),
++("NV2080_CTRL_EVENT_SET_NOTIFICATION_PARAMS", &L20),
++("NV2080_CTRL_EVENT_SET_TRIGGER_FIFO_PARAMS", &L21),
++("NV2080_CTRL_FB_GET_INFO_PARAMS", &L22),
++("NV2080_CTRL_FB_GET_SEMAPHORE_SURFACE_LAYOUT_PARAMS", &L66),
++("NV2080_CTRL_FB_GET_STATIC_BAR1_INFO_PARAMS", &L85),
++("NV2080_CTRL_FB_INFO", &L23),
++("NV2080_CTRL_GPU_GET_ENGINE_CLASSLIST_PARAMS", &L24),
++("NV2080_CTRL_GPU_GET_ENGINE_PARTNERLIST_PARAMS", &L25),
++("NV2080_CTRL_GPU_GET_NAME_STRING_PARAMS", &L88),
++("NV2080_CTRL_GR_CTXSW_ZCULL_BIND_PARAMS", &L27),
++("NV2080_CTRL_GR_GET_GPC_MASK_PARAMS", &L28),
++("NV2080_CTRL_GR_GET_INFO_PARAMS", &L29),
++("NV2080_CTRL_GR_GET_TPC_MASK_PARAMS", &L30),
++("NV2080_CTRL_GR_GET_ZCULL_INFO_PARAMS", &L31),
++("NV2080_CTRL_GR_INFO", &L32),
++("NV2080_CTRL_GR_ROUTE_INFO", &L33),
++("NV2080_CTRL_MC_GET_ARCH_INFO_PARAMS", &L34),
++("NV2080_CTRL_PERF_BOOST_PARAMS", &L35),
++("NV2080_CTRL_TIMER_GET_TIME_PARAMS", &L36),
++("NVA06C_CTRL_GPFIFO_SCHEDULE_PARAMS", &L83),
++("NVA06F_CTRL_BIND_PARAMS", &L38),
++("NVA06F_CTRL_GPFIFO_SCHEDULE_PARAMS", &L84),
++("NVB0B5_ALLOCATION_PARAMETERS", &L40),
++("NVC0B5_ALLOCATION_PARAMETERS", &L41),
++("NVC1B5_ALLOCATION_PARAMETERS", &L42),
++("NVC36F_CTRL_CMD_GPFIFO_GET_WORK_SUBMIT_TOKEN_PARAMS", &L43),
++("NVOS00_PARAMETERS", &L44),
++("NVOS21_PARAMETERS", &L67),
++("NVOS33_PARAMETERS", &L46),
++("NVOS34_PARAMETERS", &L47),
++("NVOS46_PARAMETERS", &L86),
++("NVOS47_PARAMETERS", &L77),
++("NVOS54_PARAMETERS", &L50),
++("NV_BSP_ALLOCATION_PARAMETERS", &L51),
++("NV_CHANNELGPFIFO_ALLOCATION_PARAMETERS", &L89),
++("NV_CHANNEL_GROUP_ALLOCATION_PARAMETERS", &L91),
++("NV_CTXSHARE_ALLOCATION_PARAMETERS", &L92),
++("NV_HOPPER_USERMODE_A_PARAMS", &L65),
++("NV_MEMORY_ALLOCATION_PARAMS", &L72),
++("NV_MEMORY_DESC_PARAMS", &L56),
++("NV_MEMORY_VIRTUAL_ALLOCATION_PARAMS", &L57),
++("NV_SEMAPHORE_SURFACE_ALLOC_PARAMETERS", &L69),
++("NV_SEMAPHORE_SURFACE_CTRL_BIND_CHANNEL_PARAMS", &L78),
++("NV_SEMAPHORE_SURFACE_CTRL_SET_VALUE_PARAMS", &L71),
++("NV_SEMAPHORE_SURFACE_CTRL_UNBIND_CHANNEL_PARAMS", &L79),
++("NV_VASPACE_ALLOCATION_PARAMETERS", &L87),
++("NvKmsKapiPrivExportMemoryParams", &L59),
++("NvKmsKapiPrivImportMemoryParams", &L60),
++("NvKmsKapiPrivImportSemaphoreSurfaceParams", &L73),
++("NvKmsKapiPrivSurfaceParams", &L61),
++("NvNotification", &L0),
++("drm_nvidia_gem_export_dmabuf_memory_params", &L6),
++("drm_nvidia_gem_export_nvkms_memory_params", &L2),
++("drm_nvidia_gem_identify_object_params", &L8),
++("drm_nvidia_gem_import_nvkms_memory_params", &L1),
++("drm_nvidia_semsurf_fence_create_params", &L74),
++("drm_nvidia_semsurf_fence_ctx_create_params", &L75),
++("drm_nvidia_semsurf_fence_wait_params", &L76),
++("nv_ioctl_alloc_os_event_t", &L62),
++("nv_ioctl_card_info_t", &L3),
++("nv_ioctl_free_os_event_t", &L63),
++("nv_ioctl_nvos33_parameters_with_fd", &L64),
++("nv_ioctl_register_fd_t", &L7),
++("nv_ioctl_rm_api_version_t", &L4),
++("nv_pci_info_t", &L5),
++] , constants: P20.constants };
+ static P0: Profile = Profile { layouts: &[
+ ("NvNotification", &L0),
+ ("drm_nvidia_gem_import_nvkms_memory_params", &L1),
+@@ -4855,5 +4949,6 @@ pub(super) static VERSIONS: &[(&str, &Profile)] = &[
+ ("615.71.09", &P20),
+ ("615.71.10", &P20),
+ ("615.78.08", &P20),
++("620.70.06", &P21),
+ ];
+ pub(super) static CANONICAL: &Profile = &P20;
+-- 
+2.56.1
+
