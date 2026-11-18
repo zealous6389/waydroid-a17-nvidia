@@ -1,45 +1,42 @@
 # AGENTS.md
 
-waydroid-a17-nvidia：Waydroid Android 17 + NVIDIA 加速 + KernelSU 的发布仓库（GitHub `cagedbird043/waydroid-a17-nvidia`）。
-只有作者一人开发，只在作者的机器上测试（RTX 4060 Laptop、nvidia-open 615.78.08、KDE Plasma Wayland、Arch zen 内核）。
+waydroid-a17-nvidia: the release repository for Waydroid Android 17 + NVIDIA acceleration + KernelSU (GitHub: `cagedbird043/waydroid-a17-nvidia`).
+Developed solely by the author and tested only on the author's machine (RTX 4060 Laptop, nvidia-open 615.78.08, KDE Plasma Wayland, Arch zen kernel).
 
-## 仓库和工作区
+Fork of the original by cagedbird043: the fork you are in is `zealous6389` on GitHub. This fork intends to add critical fixes to the original, for example supporting the latest nvidia-open 620.70.06, KDE Plasma Wayland, CachyOS (cachyos kernel), RTX 4060 Ti, 32GB of RAM (<- this is repo owner's machine).
 
-本仓库是工作区 `~/Projects/waydroid-a17` 的子目录 `publish/`。源码树、构建产物、native bundle 都在工作区，
-本仓库只放补丁、product 层镜像、脚本、文档、AUR 打包和 Release 资产的生成物。
+## Repository and Workspace
 
-| 路径 | 内容 |
+This repository is in the `~/Projects/waydroid-a17-nvidia` directory.
+
+| Path | Contents |
 |---|---|
-| `README.md` | 给用户看的介绍和安装，不放开发内容 |
-| `TODO.md` | 现状、计划、已知问题 |
-| `patches/<仓库>/` | 各源码仓库本地分支的 `git format-patch` |
-| `nvidia-product/` | 工作区 `nvidia/product` 的镜像 |
-| `scripts/` | 工作区 `scripts/` 的同内容副本，从工作区运行 |
-| `aur/waydroid-a17-nvidia-bin/` | AUR 包 |
-| `kernelsu/`、`host/`、`container/` | KernelSU 步骤、宿主服务与 KWin 脚本、构建容器 |
-| `reports/` | 移植记录、对比、跑分 |
-| `docs/images/` | README 截图 |
+| `README.md` | User-facing introduction and installation instructions; no development content |
+| `TODO.md` | Current status, plans, and known issues |
+| `patches/<repository>/` | `git format-patch` output from local branches of each source repository |
+| `nvidia-product/` | Mirror of the workspace's `nvidia/product` |
+| `scripts/` | Identical copies of the workspace's `scripts/`; run them from the workspace |
+| `aur/waydroid-a17-nvidia-bin/` | AUR package |
+| `kernelsu/`, `host/`, `container/` | KernelSU procedures, host services and KWin scripts, and build container |
+| `reports/` | Porting notes, comparisons, and benchmarks |
+| `docs/images/` | README screenshots |
 
-## 做事用哪个 skill
+## Which Skill to Use
 
-| 任务 | skill |
+| Task | Skill |
 |---|---|
-| 编译、重编 native 栈、bundle、导出补丁 | `waydroid-a17-build` |
-| 在 Waydroid 里验证、回归、截图 | `waydroid-a17-test` |
-| 发版、Release、AUR | `waydroid-a17-release` |
-| 检查上游更新、判断哪些修复值得移植 | `waydroid-a17-upstream` |
+| Build, rebuild the native stack, create bundles, or export patches | `waydroid-a17-build` |
+| Validate, run regression tests, or take screenshots in Waydroid | `waydroid-a17-test` |
+| Publish versions, create releases, or update AUR packages | `waydroid-a17-release` |
+| Check upstream updates and assess which fixes are worth porting | `waydroid-a17-upstream` |
 
-skill 在 `.agents/skills/`，`.claude/skills` 和 `.codex/skills` 是指向它的符号链接。
+Skills live in `.agents/skills/`; `.claude/skills` and `.codex/skills` are symlinks to that directory.
 
-## 规则
+## Additional Information
 
-- 回复用户用简体中文。结论要实测；没验证的标 `[推测]`。
-- git 由 AI 操作。提交信息用中文，身份 `cagedbird043 <cagedbird043@gmail.com>`，不加任何 AI 署名。
-- 推送范围：本仓库、AUR `waydroid-a17-nvidia-bin` 和 `nvrm-vaapi-driver`、rustnv（`~/Projects/waydroid-a17/rustnv`）、
-  nvrm（`~/Projects/waydroid-a17/nvidia/nvrm`）。工作区的 `src/` 各仓库、`nvidia/waydroid-nvidia`、`nvidia/product`
-  只在本地提交，不推送。推送、tag、Release 只在用户要求时做。
-- 不碰 NVIDIA 驱动和内核包、引导配置（包括 `lsm=`）、`@` 子卷；不重启、不注销。重启 Waydroid 会话可以。
-- sudo 用临时 askpass（`/tmp/wd-askpass`，0700），用完删除。密码不进任何仓库、脚本或文档。
-- 改了服务、Rust 库或 product 层就要走完整两遍构建，发版前必须过 `waydroid-nvidia-setup` 门禁。
-- README 只写用户关心的东西；开发流程写进对应 skill，不在 README、TODO 里重复。
-- 公开截图前检查画面内容，不放政治敏感、账号、通知等内容。
+- Respond only in English, and translate any Chinese in this repo to English accordingly.
+- You must append Co-Authored-By footer to every commit message you make, and give your model and the email accordingly (e.x GPT 6.1 Sol <noreply@openai.com>)
+- Use `gh` for altering the GitHub repo according to instruction. Dismiss the instruction if `gh` does not exist on the user's computer. Always sign the commit with the user's SSH key. The repo owner is using Bitwarden for this, but it may differ on other's machines. Check first.
+- Make sure the code is as optimized as possible. Use subagents whenever needed for large tasks.
+- Follow the core rules: DRY (Don't Repeat Yourself), and KISS (Keep It Simple, Stupid). Remind yourself of these rules frequently as to not stray away in some complex unnecessary solution.
+- ALWAYS use Conventional Commits in commit messages: <keyword>(<scope>): <message>
